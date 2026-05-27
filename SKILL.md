@@ -82,20 +82,24 @@ from sw_connect import connect_solidworks, mm, deg, new_document
 
 1. 检查 COM 返回值、特征对象、保存/导出返回值和输出文件大小。
 2. 调用 `model.ForceRebuild3(False)`、`model.ViewZoomtofit2()` 刷新模型。
-3. 用 `scripts/sw_review.py` 导出 `isometric` 预览图；复杂模型再导出 `front/top/right`。
-4. 通过截图或导出的 BMP 检查：主体是否存在、比例/方位是否合理、关键部件是否缺失、是否明显重叠或悬空、文件名和输出路径是否正确。
+3. 用 `scripts/sw_review.py` 的 `run_review()` 导出 `isometric/front/top/right` 预览图并写入 `*_review_report.json`。
+4. 读取报告里的 `checks` 和预览图；通过截图或导出的 BMP 检查：主体是否存在、比例/方位是否合理、关键部件是否缺失、是否明显重叠或悬空、文件名和输出路径是否正确。
 5. 若发现问题，先修脚本并重新生成，再汇报；不要只报告“保存成功”。
 
 示例：
 
 ```python
-from sw_review import collect_model_summary, save_review_previews
+from sw_review import run_review
 
 model.ForceRebuild3(False)
-previews = save_review_previews(model, r"C:\temp\review", basename="car")
-summary = collect_model_summary(model)
-print(previews)
-print(summary["feature_count"])
+report, report_path = run_review(
+    model,
+    r"C:\temp\review",
+    basename="car",
+    expected_outputs=[r"C:\temp\car.sldprt", r"C:\temp\car.step"],
+)
+print(report_path)
+print(report["checks"])
 ```
 
 ## 关键注意事项

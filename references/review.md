@@ -11,25 +11,36 @@
 5. 模型已缩放到适合窗口：`model.ViewZoomtofit2()`。
 6. 至少导出一张等轴测 BMP，复杂模型导出前视、俯视、右视。
 
-## 预览图导出
+## 结构化自审查报告
 
 ```python
 import sys
 sys.path.insert(0, r"SKILL_DIR/scripts")
 
-from sw_review import collect_model_summary, save_review_previews
+from sw_review import run_review
 
 model.ForceRebuild3(False)
-previews = save_review_previews(
+report, report_path = run_review(
     model,
     r"C:\temp\solidworks_review",
     basename="model",
     views=("isometric", "front", "top", "right"),
+    expected_outputs=[r"C:\temp\model.sldprt", r"C:\temp\model.step"],
 )
-summary = collect_model_summary(model)
-print(previews)
-print(summary["feature_count"])
+print(report_path)
+print(report["checks"])
 ```
+
+`run_review()` 会输出：
+
+- 多视角 BMP 预览图。
+- `*_review_report.json` 结构化报告。
+- `checks.previews_created`：预览图是否生成。
+- `checks.previews_not_blank`：预览图是否疑似非空白。
+- `checks.expected_outputs_exist`：期望输出文件是否真实存在且大小大于 0。
+- `checks.feature_summary_available`：是否能读取特征树摘要。
+
+注意：结构化报告只能抓明显失败，不能替代人工或视觉模型对几何意图的判断。
 
 ## 目视自查清单
 
