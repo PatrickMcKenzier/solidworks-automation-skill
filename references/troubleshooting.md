@@ -85,6 +85,28 @@ print(f"错误码: {errors.value}, 警告码: {warnings.value}")
 # 查看 references/export.md 中的错误码对照表
 ```
 
+## 未封装 API 调用
+
+当需要使用本 skill 尚未封装的 SolidWorks API 时：
+
+1. 先查 SolidWorks 官方 API 文档或本地 SDK 文档，确认接口签名和枚举。
+2. 用最小脚本验证接口，不要直接嵌入大任务。
+3. 对 COM 返回值做 `None` / `False` 检查，并打印错误码/警告码。
+4. 完成后把稳定写法补进 `scripts/`，把坑位补进本文件或对应 `references/*.md`。
+
+沉淀模板：
+
+```text
+### <API 或错误现象>
+
+场景:
+错误/症状:
+原因:
+稳定写法:
+  # 最小可运行示例
+验证方式:
+```
+
 ## 性能优化
 
 ### 大型装配体操作慢

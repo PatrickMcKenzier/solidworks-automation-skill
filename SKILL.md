@@ -77,6 +77,16 @@ from sw_connect import connect_solidworks, mm, deg, new_document
 4. 使用 `session.export()` 或 `sw_export.py` 保存/导出文件
 5. 使用 `sw_review.py` 导出预览图并自审查；如果有 GUI/桌面截图能力，打开 SolidWorks 视图截图复核
 
+## 未封装 API 规则
+
+当任务需要调用 `scripts/` 中尚未封装的 SolidWorks API 时：
+
+1. 先查询 SolidWorks 官方 API 文档，或本地 SolidWorks SDK / 参考资料，确认方法签名、参数含义、枚举值、返回值和版本差异。
+2. 禁止凭记忆猜接口；尤其是长参数 COM 方法、`VARIANT` / by-ref 参数、枚举值、选择标记和 `SaveAs` 类接口。
+3. 写代码时保留最小可运行脚本，并对每一步返回值做 `None` / `False` 检查。
+4. 实现后必须真实运行，保存或导出目标文件，并使用 `sw_review.py` 生成预览图与审查报告。
+5. 新发现的坑、错误码、兼容写法或稳定封装，要补充到 `references/troubleshooting.md` 或对应模块参考文档；常用逻辑再沉淀进 `scripts/`。
+
 ## 结果自审查
 
 每次生成、修改、导入或导出 CAD 后都要做自审查，除非用户明确说不需要：
