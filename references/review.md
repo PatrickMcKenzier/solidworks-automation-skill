@@ -35,6 +35,7 @@ print(report["checks"])
 
 - 多视角 BMP 预览图。
 - `*_review_report.json` 结构化报告。
+- `*_review_summary.md` 可读摘要，适合贴到交付说明、Issue 或 PR。
 - `evaluation.status`：`pass` / `warn` / `fail`。
 - `evaluation.score`：规则评分，满分 100。
 - `evaluation.issues`：机器可读的问题列表。
@@ -60,6 +61,7 @@ python scripts/sw_review.py ^
 返回码：
 
 - `0`：`pass` 或 `warn`，报告已生成。
+- `1`：传入 `--fail-on-warn` 且状态为 `warn`。
 - `2`：`fail`，存在必须修复的问题。
 
 ## 目视自查清单

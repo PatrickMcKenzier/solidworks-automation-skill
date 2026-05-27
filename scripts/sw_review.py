@@ -395,6 +395,55 @@ def write_review_report(report, output_path):
     return str(output_path)
 
 
+def write_markdown_summary(report, output_path):
+    """
+    写入 Markdown 审查摘要。
+
+    返回:
+        摘要路径字符串
+    """
+    output_path = _expand_path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    evaluation = report.get("evaluation", {})
+    checks = report.get("checks", {})
+    lines = [
+        "# SolidWorks Review Summary",
+        "",
+        f"- Status: `{evaluation.get('status', 'unknown')}`",
+        f"- Score: `{evaluation.get('score', 0)}`",
+        f"- Manual review required: `{evaluation.get('manual_review_required', True)}`",
+        "",
+        "## Checks",
+        "",
+    ]
+    for key, value in checks.items():
+        lines.append(f"- `{key}`: `{value}`")
+
+    lines.extend(["", "## Issues", ""])
+    issues = evaluation.get("issues", [])
+    if issues:
+        for issue in issues:
+            lines.append(f"- `{issue.get('severity')}` `{issue.get('code')}`: {issue.get('message')}")
+    else:
+        lines.append("- No rule-based issues.")
+
+    lines.extend(["", "## Recommendations", ""])
+    recommendations = evaluation.get("recommendations", [])
+    if recommendations:
+        for item in recommendations:
+            lines.append(f"- {item}")
+    else:
+        lines.append("- Inspect generated previews and confirm geometry matches the user request.")
+
+    lines.extend(["", "## Previews", ""])
+    for preview in report.get("previews", []):
+        lines.append(f"- `{preview.get('path')}`")
+
+    with open(output_path, "w", encoding="utf-8") as file:
+        file.write("\n".join(lines) + "\n")
+    return str(output_path)
+
+
 def run_review(model, output_dir, basename="review", views=None, expected_outputs=None):
     """
     一站式运行自审查并写入 `review_report.json`。
@@ -411,6 +460,9 @@ def run_review(model, output_dir, basename="review", views=None, expected_output
         expected_outputs=expected_outputs,
     )
     report_path = write_review_report(report, output_dir / f"{basename}_review_report.json")
+    summary_path = write_markdown_summary(report, output_dir / f"{basename}_review_summary.md")
+    report["summary_path"] = summary_path
+    write_review_report(report, report_path)
     return report, report_path
 
 
@@ -424,6 +476,7 @@ def _parse_args():
     parser.add_argument("--expected", action="append", default=[], help="期望存在的输出文件，可重复传入。")
     parser.add_argument("--version", type=int, help="SolidWorks 年份，例如 2024。")
     parser.add_argument("--silent-open", action="store_true", help="静默打开 --file。")
+    parser.add_argument("--fail-on-warn", action="store_true", help="warn 也返回非零退出码。")
     return parser.parse_args()
 
 
@@ -446,12 +499,17 @@ def main():
     )
     evaluation = report["evaluation"]
     print(f"报告: {report_path}")
+    print(f"摘要: {report.get('summary_path')}")
     print(f"状态: {evaluation['status']} / 分数: {evaluation['score']}")
     if evaluation["issues"]:
         print("问题:")
         for issue in evaluation["issues"]:
             print(f"- [{issue['severity']}] {issue['code']}: {issue['message']}")
-    return 0 if evaluation["status"] in ("pass", "warn") else 2
+    if evaluation["status"] == "fail":
+        return 2
+    if args.fail_on_warn and evaluation["status"] == "warn":
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
