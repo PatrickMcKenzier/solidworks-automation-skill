@@ -16,6 +16,7 @@ REQUIRED_FILES = [
     "agents/openai.yaml",
     "scripts/sw_connect.py",
     "scripts/__init__.py",
+    "scripts/sw_appearance.py",
     "scripts/sw_part.py",
     "scripts/sw_assembly.py",
     "scripts/sw_drawing.py",

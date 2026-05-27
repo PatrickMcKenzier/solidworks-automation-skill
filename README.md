@@ -18,6 +18,7 @@
 - 🔩 **装配体操作** - 添加组件、配合关系、干涉检查、爆炸视图
 - 📐 **工程图出图** - 三视图、剖视图、尺寸标注、BOM 表
 - 💾 **文件导出** - STEP、STL、IGES、PDF、DXF/DWG、Parasolid
+- 🎨 **外观材质** - 文档、特征、组件级颜色设置，支持装配体分色建模
 - 🔨 **钣金设计** - 基体法兰、边线法兰、展开图导出
 - ⚡ **焊件设计** - 结构构件、切割清单
 - 📊 **FEA 仿真** - 静态分析、频率分析、热分析
@@ -118,6 +119,7 @@ solidworks-automation-skill/
 ├── scripts/              # Python 脚本模块
 │   ├── sw_session.py    # 友好会话 API
 │   ├── sw_connect.py    # 连接与文档管理
+│   ├── sw_appearance.py # 外观与材质
 │   ├── sw_part.py       # 零件建模
 │   ├── sw_assembly.py   # 装配体操作
 │   ├── sw_drawing.py    # 工程图
@@ -125,6 +127,7 @@ solidworks-automation-skill/
 │   └── sw_review.py     # 多视角预览与自审查报告
 ├── references/          # API 参考文档
 │   ├── openclaw.md
+│   ├── appearance.md
 │   ├── review.md
 │   ├── part-modeling.md
 │   ├── assembly.md
@@ -252,6 +255,7 @@ model.Extension.SelectByID2(
 ### 🛠️ 高级功能
 
 - **批量处理**: 批量打开、转换、导出文件
+- **外观材质**: 设置文档、特征、组件级颜色；复杂颜色建议拆成多零件装配体
 - **配置管理**: 创建和切换配置,修改配置参数
 - **自定义属性**: 读写零件属性,支持配置特定属性
 - **设计表**: 通过 Excel 驱动参数化设计

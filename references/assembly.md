@@ -81,3 +81,11 @@ count = interference.GetInterferenceCount()
 config = model.GetActiveConfiguration()
 # 使用 IExplosionStepData 创建爆炸步骤
 ```
+
+## 大型装配体生成建议
+
+- 超过 20 个零件时，优先分批生成零件，保存后关闭文档，避免 SolidWorks COM 进程长时间堆积打开文档。
+- 装配前先确认所有零件文件真实存在，必要时先重启 SolidWorks 再执行装配步骤。
+- `AddComponent4` 在某些状态下要求零件已被打开或当前装配体为活动文档；失败时先 `open_document(sw, part_path, silent=True)` 再添加。
+- 装配脚本应记录失败组件清单，不要在缺件情况下声称装配完整。
+- 生成后必须用 `sw_review.py` 导出多视角预览图；如果预览图变成黑块、空白或只显示局部组件，应视为装配不合格并回退到更小批次。

@@ -43,6 +43,7 @@ session.export(model, r"C:\temp\cylinder.step")
 |---|---|---|
 | 友好会话 API | `scripts/sw_session.py` | - |
 | 连接与文档管理 | `scripts/sw_connect.py` | - |
+| 外观与材质 | `scripts/sw_appearance.py` | `references/appearance.md` |
 | 零件建模（草图+特征） | `scripts/sw_part.py` | `references/part-modeling.md` |
 | 装配体操作 | `scripts/sw_assembly.py` | `references/assembly.md` |
 | 工程图出图 | `scripts/sw_drawing.py` | `references/drawing.md` |
@@ -108,6 +109,7 @@ print(report["evaluation"])
 - **版本**：使用 `SldWorks.Application` 自动连接，兼容所有版本
 - **选择**：特征操作前需用 `SelectByID2` 选择目标实体
 - **草图**：推荐用 `with sketch(model, "Front Plane") as sketch_name:` 自动进入/退出草图并获取草图名
+- **外观**：对颜色要求高的模型优先拆成多零件装配体，并用 `sw_appearance.py` 设置文档级或组件级外观
 - **VARIANT**：by-ref 参数必须用 `VARIANT(pythoncom.VT_BYREF | pythoncom.VT_I4, 0)` 包装
 - **基准面名称**：`start_sketch()` 会自动兼容英文版 "Front/Top/Right Plane" 与中文版 "前视/上视/右视基准面"
 - **草图坐标**：基于草图平面的局部坐标系，单位为米
