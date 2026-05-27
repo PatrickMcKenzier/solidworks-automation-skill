@@ -2,12 +2,32 @@
 SolidWorks 连接工具
 提供连接到 SolidWorks 实例的各种方法
 """
-import win32com.client
-import pythoncom
-from win32com.client import VARIANT
-import time
-import os
 import glob
+import os
+import time
+
+import pythoncom
+import win32com.client
+from win32com.client import VARIANT
+
+
+DOC_TYPE_MAP = {
+    "part": 1,
+    "prt": 1,
+    "sldprt": 1,
+    "assembly": 2,
+    "asm": 2,
+    "sldasm": 2,
+    "drawing": 3,
+    "drw": 3,
+    "slddrw": 3,
+}
+
+DOC_TYPE_LABELS = {
+    "part": "零件",
+    "assembly": "装配体",
+    "drawing": "工程图",
+}
 
 
 def get_com_member(obj, attr_name, *args):
@@ -31,36 +51,66 @@ def create_empty_dispatch_variant():
     return VARIANT(pythoncom.VT_DISPATCH, None)
 
 
-def connect_solidworks(version=None, wait_seconds=5):
+def normalize_doc_type(doc_type):
     """
-    连接到 SolidWorks 实例
+    规范化文档类型名称。
+
+    参数:
+        doc_type: "part"、"assembly"、"drawing" 或常见缩写/扩展名
+
+    返回:
+        (name, enum_value) 元组
+    """
+    key = str(doc_type).strip().lower().lstrip(".")
+    enum_value = DOC_TYPE_MAP.get(key)
+    if enum_value is None:
+        raise ValueError(f"未知文档类型: {doc_type}")
+
+    name_map = {1: "part", 2: "assembly", 3: "drawing"}
+    return name_map[enum_value], enum_value
+
+
+def _expand_path(file_path):
+    """展开用户目录和环境变量，并返回绝对路径。"""
+    return os.path.abspath(os.path.expandvars(os.path.expanduser(file_path)))
+
+
+def _ensure_parent_dir(file_path):
+    """确保输出文件的父目录存在。"""
+    parent = os.path.dirname(_expand_path(file_path))
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+
+
+def connect_solidworks(version=None, wait_seconds=5, visible=True):
+    """
+    连接到 SolidWorks 实例。
 
     参数:
         version: SolidWorks 版本年份（如 2024），None 则自动检测
         wait_seconds: 启动新实例后等待秒数
+        visible: 启动新实例后是否显示窗口
 
     返回:
         (sw, model) 元组，model 可能为 None（无打开的文档时）
     """
     sw = None
 
-    # 优先连接已运行的实例
+    # 优先连接已运行的实例。
     try:
         sw = win32com.client.GetActiveObject("SldWorks.Application")
         print("已连接到运行中的 SolidWorks 实例")
     except Exception:
-        # 启动新实例
         prog_id = "SldWorks.Application"
         if version:
             revision = (version - 2000) + 8
             prog_id = f"SldWorks.Application.{revision}"
 
         sw = win32com.client.Dispatch(prog_id)
-        sw.Visible = True
+        sw.Visible = visible
         print(f"启动了新的 SolidWorks 实例（ProgID: {prog_id}）")
         time.sleep(wait_seconds)
 
-    # 获取当前活动文档
     model = sw.ActiveDoc
     if model:
         doc_types = {1: "零件", 2: "装配体", 3: "工程图"}
@@ -74,7 +124,7 @@ def connect_solidworks(version=None, wait_seconds=5):
 
 
 def get_sw_version(sw):
-    """获取 SolidWorks 版本信息"""
+    """获取 SolidWorks 版本信息。"""
     rev = get_com_member(sw, "RevisionNumber")
     major = int(rev.split(".")[0])
     year = major - 8 + 2000
@@ -83,7 +133,7 @@ def get_sw_version(sw):
 
 def find_template(sw, doc_type="part"):
     """
-    自动查找 SolidWorks 文档模板
+    自动查找 SolidWorks 文档模板。
 
     参数:
         sw: SolidWorks 应用对象
@@ -92,7 +142,8 @@ def find_template(sw, doc_type="part"):
     返回:
         模板文件路径字符串
     """
-    # 从 SolidWorks 设置获取默认模板
+    doc_type, _ = normalize_doc_type(doc_type)
+
     type_map = {
         "part": (sw.GetUserPreferenceStringValue(24), "*.prtdot"),
         "assembly": (sw.GetUserPreferenceStringValue(25), "*.asmdot"),
@@ -102,7 +153,7 @@ def find_template(sw, doc_type="part"):
     default_path, pattern = type_map.get(doc_type, type_map["part"])
     if default_path:
         for candidate_root in str(default_path).split(";"):
-            candidate_root = candidate_root.strip().strip('"')
+            candidate_root = _expand_path(candidate_root.strip().strip('"'))
             if not candidate_root:
                 continue
 
@@ -114,14 +165,13 @@ def find_template(sw, doc_type="part"):
                 if matches:
                     return matches[0]
 
-    # 搜索常见模板目录
     search_dirs = [
         r"C:\ProgramData\SolidWorks\SOLIDWORKS *\templates",
         r"C:\Program Files\SOLIDWORKS Corp\SOLIDWORKS\lang\chinese-simplified",
         r"C:\Program Files\SOLIDWORKS Corp\SOLIDWORKS\lang\english",
     ]
     for search_dir in search_dirs:
-        matches = glob.glob(os.path.join(search_dir, pattern))
+        matches = glob.glob(os.path.join(os.path.expandvars(search_dir), pattern))
         if matches:
             return matches[0]
 
@@ -130,7 +180,7 @@ def find_template(sw, doc_type="part"):
 
 def new_document(sw, doc_type="part", template_path=None):
     """
-    创建新文档
+    创建新文档。
 
     参数:
         sw: SolidWorks 应用对象
@@ -140,8 +190,11 @@ def new_document(sw, doc_type="part", template_path=None):
     返回:
         新建的 IModelDoc2 对象
     """
+    doc_type, _ = normalize_doc_type(doc_type)
     if not template_path:
         template_path = find_template(sw, doc_type)
+    else:
+        template_path = _expand_path(template_path)
 
     model = sw.NewDocument(template_path, 0, 0, 0)
     if model is None:
@@ -152,25 +205,34 @@ def new_document(sw, doc_type="part", template_path=None):
             time.sleep(0.25)
 
     if model is None:
-        raise RuntimeError(f"创建{doc_type}文档失败，SolidWorks 未返回活动文档")
+        raise RuntimeError(f"创建{DOC_TYPE_LABELS.get(doc_type, doc_type)}文档失败，SolidWorks 未返回活动文档")
 
-    doc_type_names = {"part": "零件", "assembly": "装配体", "drawing": "工程图"}
-    print(f"已创建新{doc_type_names.get(doc_type, doc_type)}文档")
+    print(f"已创建新{DOC_TYPE_LABELS.get(doc_type, doc_type)}文档")
     return model
 
 
-def open_document(sw, file_path, read_only=False):
+def open_document(sw, file_path, read_only=False, silent=False, raise_on_error=False):
     """
-    打开已有文档
+    打开已有文档。
 
     参数:
         sw: SolidWorks 应用对象
         file_path: 文件完整路径
         read_only: 是否以只读模式打开
+        silent: 是否静默打开
+        raise_on_error: 打开失败时是否抛出异常
 
     返回:
         IModelDoc2 对象
     """
+    file_path = _expand_path(file_path)
+    if not os.path.exists(file_path):
+        message = f"文件不存在: {file_path}"
+        if raise_on_error:
+            raise FileNotFoundError(message)
+        print(message)
+        return None
+
     ext = os.path.splitext(file_path)[1].lower()
     type_map = {".sldprt": 1, ".sldasm": 2, ".slddrw": 3, ".step": 1, ".stp": 1, ".igs": 1, ".iges": 1}
     doc_type = type_map.get(ext, 1)
@@ -178,18 +240,23 @@ def open_document(sw, file_path, read_only=False):
     errors = VARIANT(pythoncom.VT_BYREF | pythoncom.VT_I4, 0)
     warnings = VARIANT(pythoncom.VT_BYREF | pythoncom.VT_I4, 0)
     options = 2 if read_only else 0  # swOpenDocOptions_ReadOnly = 2
+    if silent:
+        options |= 1  # swOpenDocOptions_Silent = 1
 
     model = sw.OpenDoc6(file_path, doc_type, options, "", errors, warnings)
     if model:
         print(f"已打开: {file_path}")
     else:
-        print(f"打开失败, 错误码: {errors.value}")
+        message = f"打开失败, 错误码: {errors.value}, 警告码: {warnings.value}"
+        if raise_on_error:
+            raise RuntimeError(message)
+        print(message)
     return model
 
 
 def save_document(model, file_path=None):
     """
-    保存文档
+    保存文档。
 
     参数:
         model: IModelDoc2 对象
@@ -202,6 +269,8 @@ def save_document(model, file_path=None):
     warnings = VARIANT(pythoncom.VT_BYREF | pythoncom.VT_I4, 0)
 
     if file_path:
+        file_path = _expand_path(file_path)
+        _ensure_parent_dir(file_path)
         success = model.Extension.SaveAs(
             file_path, 0, 1, create_empty_dispatch_variant(), errors, warnings
         )
@@ -216,11 +285,11 @@ def save_document(model, file_path=None):
 
 
 def mm(value):
-    """毫米转米（SolidWorks API 单位）"""
+    """毫米转米（SolidWorks API 单位）。"""
     return value / 1000.0
 
 
 def deg(value):
-    """角度转弧度"""
+    """角度转弧度。"""
     import math
     return value * math.pi / 180.0

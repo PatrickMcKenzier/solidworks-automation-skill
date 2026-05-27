@@ -42,12 +42,13 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="solidworks-automation",
-    version="1.0.0",
+    version="1.1.0",
     author="wzyn20051216",
     description="Python automation toolkit for SolidWorks API",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/wzyn20051216/solidworks-automation-skill",
+    license="MIT",
     packages=["solidworks_automation"],
     package_dir={"solidworks_automation": "scripts"},
     cmdclass={"install": PostInstallCommand},
@@ -55,7 +56,6 @@ setup(
     python_requires=">=3.8",
     classifiers=[
         "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License",
         "Operating System :: Microsoft :: Windows",
     ],
     keywords="solidworks automation cad api",

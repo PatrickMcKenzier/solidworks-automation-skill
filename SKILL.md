@@ -18,9 +18,19 @@ metadata: { "openclaw": { "homepage": "https://github.com/wzyn20051216/solidwork
 
 ```python
 import sys; sys.path.insert(0, r"SKILL_DIR/scripts")
-from sw_connect import connect_solidworks, mm, deg, new_document
+from sw_connect import mm
+from sw_part import sketch, sketch_circle, extrude_boss
+from sw_session import SolidWorksSession
 
-sw, model = connect_solidworks()  # 连接已运行的实例
+session = SolidWorksSession()
+model = session.new_part()
+
+with sketch(model, "Front Plane") as sketch_name:
+    sketch_circle(model, 0, 0, mm(25))
+
+extrude_boss(model, sketch_name, mm(50))
+session.save(model, r"C:\temp\cylinder.sldprt")
+session.export(model, r"C:\temp\cylinder.step")
 ```
 
 > 将 `SKILL_DIR` 替换为此技能的实际安装路径。
@@ -31,6 +41,7 @@ sw, model = connect_solidworks()  # 连接已运行的实例
 
 | 需求 | 脚本 | 参考文档 |
 |---|---|---|
+| 友好会话 API | `scripts/sw_session.py` | - |
 | 连接与文档管理 | `scripts/sw_connect.py` | - |
 | 零件建模（草图+特征） | `scripts/sw_part.py` | `references/part-modeling.md` |
 | 装配体操作 | `scripts/sw_assembly.py` | `references/assembly.md` |
@@ -58,15 +69,16 @@ from sw_connect import connect_solidworks, mm, deg, new_document
 ## 使用流程
 
 1. 确认 SolidWorks 正在运行
-2. 调用 `connect_solidworks()` 连接实例
-3. 根据需求调用对应脚本函数（组合使用）
-4. 使用 `sw_export.py` 保存/导出文件
+2. 优先用 `SolidWorksSession()` 管理连接、打开、新建、保存、导出
+3. 需要底层控制时再组合 `sw_connect.py`、`sw_part.py` 等函数
+4. 使用 `session.export()` 或 `sw_export.py` 保存/导出文件
 
 ## 关键注意事项
 
 - **单位**：API 统一使用**米**。用 `mm(50)` 转换 50mm 为 0.05m，用 `deg(90)` 转换角度
 - **版本**：使用 `SldWorks.Application` 自动连接，兼容所有版本
 - **选择**：特征操作前需用 `SelectByID2` 选择目标实体
+- **草图**：推荐用 `with sketch(model, "Front Plane") as sketch_name:` 自动进入/退出草图并获取草图名
 - **VARIANT**：by-ref 参数必须用 `VARIANT(pythoncom.VT_BYREF | pythoncom.VT_I4, 0)` 包装
 - **基准面名称**：`start_sketch()` 会自动兼容英文版 "Front/Top/Right Plane" 与中文版 "前视/上视/右视基准面"
 - **草图坐标**：基于草图平面的局部坐标系，单位为米

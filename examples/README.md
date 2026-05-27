@@ -80,6 +80,20 @@
 
 ---
 
+### 06_friendly_api.py
+使用更顺手的 `SolidWorksSession` API 创建并导出零件
+
+**学习内容:**
+- 使用 `SolidWorksSession` 新建、保存、导出文件
+- 使用 `with sketch(...)` 自动进入/退出草图
+- 减少硬编码草图名和重复路径处理
+
+**运行前提:**
+- SolidWorks 已运行，或允许脚本启动 SolidWorks
+- 确保 `C:\temp\` 目录可写
+
+---
+
 ## 运行示例
 
 1. 确保已安装依赖:

@@ -115,6 +115,7 @@ print("零件创建完成!")
 ```
 solidworks-automation-skill/
 ├── scripts/              # Python 脚本模块
+│   ├── sw_session.py    # 友好会话 API
 │   ├── sw_connect.py    # 连接与文档管理
 │   ├── sw_part.py       # 零件建模
 │   ├── sw_assembly.py   # 装配体操作
@@ -133,6 +134,27 @@ solidworks-automation-skill/
 ```
 
 ### 🎯 使用示例
+
+#### 推荐写法：Session API
+
+```python
+import sys
+sys.path.insert(0, r"./scripts")
+
+from sw_connect import mm
+from sw_part import sketch, sketch_circle, extrude_boss
+from sw_session import SolidWorksSession
+
+session = SolidWorksSession()
+model = session.new_part()
+
+with sketch(model, "Front Plane") as sketch_name:
+    sketch_circle(model, 0, 0, mm(25))
+
+extrude_boss(model, sketch_name, mm(50))
+session.save(model, r"C:\temp\cylinder.sldprt")
+session.export(model, r"C:\temp\cylinder.step")
+```
 
 #### 创建零件
 

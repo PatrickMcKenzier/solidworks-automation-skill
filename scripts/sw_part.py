@@ -5,6 +5,7 @@ SolidWorks 零件建模工具
 import win32com.client
 import pythoncom
 from win32com.client import VARIANT
+from contextlib import contextmanager
 
 PLANE_NAME_ALIASES = {
     "Front Plane": ["Front Plane", "前视基准面"],
@@ -162,6 +163,37 @@ def start_sketch(model, plane_name="Front Plane"):
 def end_sketch(model):
     """退出当前草图"""
     model.SketchManager.InsertSketch(True)
+
+
+@contextmanager
+def sketch(model, plane_name="Front Plane"):
+    """
+    草图上下文管理器。
+
+    示例:
+        with sketch(model, "Front Plane") as sketch_name:
+            sketch_circle(model, 0, 0, mm(25))
+        extrude_boss(model, sketch_name, mm(50))
+    """
+    start_sketch(model, plane_name)
+    try:
+        yield current_sketch_name(model)
+    finally:
+        end_sketch(model)
+
+
+def current_sketch_name(model, fallback="Sketch1"):
+    """
+    获取当前草图名称。
+
+    参数:
+        model: IModelDoc2
+        fallback: 无法读取当前草图时返回的默认名称
+    """
+    active_sketch = model.SketchManager.ActiveSketch
+    if active_sketch:
+        return active_sketch.Name
+    return fallback
 
 
 def sketch_line(model, x1, y1, x2, y2):

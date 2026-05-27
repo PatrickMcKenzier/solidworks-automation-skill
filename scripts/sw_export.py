@@ -9,6 +9,13 @@ import os
 from sw_connect import create_empty_dispatch_variant, get_com_member
 
 
+def _ensure_parent_dir(file_path):
+    """确保输出文件的父目录存在。"""
+    parent = os.path.dirname(os.path.abspath(file_path))
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+
+
 def export_to_step(model, output_path):
     """导出为 STEP 格式"""
     return _export_generic(model, output_path)
@@ -108,6 +115,7 @@ def batch_export(sw, file_paths, output_dir, format_ext=".step"):
         output_dir: 输出目录
         format_ext: 输出格式扩展名（".step", ".stl", ".igs", ".pdf"）
     """
+    output_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(output_dir)))
     os.makedirs(output_dir, exist_ok=True)
     results = []
 
@@ -120,9 +128,14 @@ def batch_export(sw, file_paths, output_dir, format_ext=".step"):
         errors = VARIANT(pythoncom.VT_BYREF | pythoncom.VT_I4, 0)
         warnings = VARIANT(pythoncom.VT_BYREF | pythoncom.VT_I4, 0)
 
-        model = sw.OpenDoc6(file_path, doc_type, 1, "", errors, warnings)  # 静默打开
+        file_path = os.path.abspath(os.path.expandvars(os.path.expanduser(file_path)))
+        model = sw.OpenDoc6(file_path, doc_type, 1, "", errors, warnings)  # swOpenDocOptions_Silent
         if not model:
-            results.append({"file": file_path, "success": False, "error": "无法打开"})
+            results.append({
+                "file": file_path,
+                "success": False,
+                "error": f"无法打开，错误码: {errors.value}, 警告码: {warnings.value}",
+            })
             continue
 
         # 导出
@@ -148,6 +161,8 @@ def batch_export(sw, file_paths, output_dir, format_ext=".step"):
 def _export_generic(model, output_path):
     """通用导出函数（STEP/STL/IGES/Parasolid/DXF）"""
     model.ClearSelection2(True)
+    output_path = os.path.abspath(os.path.expandvars(os.path.expanduser(output_path)))
+    _ensure_parent_dir(output_path)
     errors = VARIANT(pythoncom.VT_BYREF | pythoncom.VT_I4, 0)
     warnings = VARIANT(pythoncom.VT_BYREF | pythoncom.VT_I4, 0)
 
