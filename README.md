@@ -121,9 +121,11 @@ solidworks-automation-skill/
 │   ├── sw_part.py       # 零件建模
 │   ├── sw_assembly.py   # 装配体操作
 │   ├── sw_drawing.py    # 工程图
-│   └── sw_export.py     # 文件导出
+│   ├── sw_export.py     # 文件导出
+│   └── sw_review.py     # 多视角预览与自审查报告
 ├── references/          # API 参考文档
 │   ├── openclaw.md
+│   ├── review.md
 │   ├── part-modeling.md
 │   ├── assembly.md
 │   ├── drawing.md
