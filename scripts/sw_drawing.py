@@ -1,10 +1,14 @@
 """
 SolidWorks 工程图操作工具
 """
-import win32com.client
-import pythoncom
-from win32com.client import VARIANT
-from sw_connect import get_com_member
+try:
+    from .sw_preflight import import_com_dependencies
+    from .sw_connect import get_com_member
+except ImportError:
+    from sw_preflight import import_com_dependencies
+    from sw_connect import get_com_member
+
+pythoncom, _win32com, VARIANT = import_com_dependencies()
 
 
 def create_standard_views(drawing_model, part_path):

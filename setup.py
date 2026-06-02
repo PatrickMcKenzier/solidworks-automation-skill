@@ -42,7 +42,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="solidworks-automation",
-    version="1.1.0",
+    version="1.2.0",
     author="wzyn20051216",
     description="Python automation toolkit for SolidWorks API",
     long_description=long_description,
@@ -52,7 +52,7 @@ setup(
     packages=["solidworks_automation"],
     package_dir={"solidworks_automation": "scripts"},
     cmdclass={"install": PostInstallCommand},
-    install_requires=["pywin32>=305"],
+    install_requires=["pywin32>=305", "comtypes>=1.2.0"],
     python_requires=">=3.8",
     classifiers=[
         "Programming Language :: Python :: 3",

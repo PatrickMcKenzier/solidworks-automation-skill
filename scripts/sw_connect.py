@@ -6,9 +6,12 @@ import glob
 import os
 import time
 
-import pythoncom
-import win32com.client
-from win32com.client import VARIANT
+try:
+    from .sw_preflight import ensure_solidworks_installed, import_com_dependencies
+except ImportError:
+    from sw_preflight import ensure_solidworks_installed, import_com_dependencies
+
+pythoncom, win32com_client, VARIANT = import_com_dependencies()
 
 
 DOC_TYPE_MAP = {
@@ -94,11 +97,12 @@ def connect_solidworks(version=None, wait_seconds=5, visible=True):
     返回:
         (sw, model) 元组，model 可能为 None（无打开的文档时）
     """
+    ensure_solidworks_installed()
     sw = None
 
     # 优先连接已运行的实例。
     try:
-        sw = win32com.client.GetActiveObject("SldWorks.Application")
+        sw = win32com_client.GetActiveObject("SldWorks.Application")
         print("已连接到运行中的 SolidWorks 实例")
     except Exception:
         prog_id = "SldWorks.Application"
@@ -106,7 +110,7 @@ def connect_solidworks(version=None, wait_seconds=5, visible=True):
             revision = (version - 2000) + 8
             prog_id = f"SldWorks.Application.{revision}"
 
-        sw = win32com.client.Dispatch(prog_id)
+        sw = win32com_client.Dispatch(prog_id)
         sw.Visible = visible
         print(f"启动了新的 SolidWorks 实例（ProgID: {prog_id}）")
         time.sleep(wait_seconds)

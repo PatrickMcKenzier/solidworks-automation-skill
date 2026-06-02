@@ -9,11 +9,22 @@ import pathlib
 import sys
 
 
+def _configure_stdio_utf8():
+    """在 Windows 旧代码页下尽量使用 UTF-8 输出中文提示。"""
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
+
+
+_configure_stdio_utf8()
+
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 REQUIRED_FILES = [
     "SKILL.md",
     "README.md",
     "agents/openai.yaml",
+    "scripts/sw_preflight.py",
+    "scripts/sw_macro_guard.py",
     "scripts/sw_connect.py",
     "scripts/__init__.py",
     "scripts/sw_appearance.py",

@@ -11,8 +11,23 @@ metadata: { "openclaw": { "homepage": "https://github.com/wzyn20051216/solidwork
 ### 环境要求
 
 - Windows 系统 + SolidWorks 已安装并运行
-- Python 3.8+ + `pywin32`（`pip install pywin32`）
+- Python 3.8+ + `pywin32` / `comtypes`
 - 如果通过 OpenClaw 使用，确保技能目录位于 `~/.openclaw/skills/solidworks-automation/` 或 `~/.agents/skills/solidworks-automation/`
+
+### 入口自检
+
+所有代理在执行 SolidWorks 自动化前，先运行技能自检：
+
+```bash
+python SKILL_DIR/scripts/sw_preflight.py
+```
+
+规则：
+
+1. 检测到缺少 `comtypes` / `win32com` / `pythoncom` 时，向用户弹出友好确认：
+   `检测到当前 Python 环境缺少 comtypes / win32com 库，是否授权 AI 自动为您配置本地环境？[Y/N]`
+2. 用户输入 `Y` / `yes` 后，代理可在本地 shell 中自动执行 `python -m pip install "pywin32>=305" "comtypes>=1.2.0"` 补齐依赖；用户拒绝时停止并给出手动安装命令。
+3. 检测不到 SolidWorks 安装或 COM 注册时，直接停止，不要继续生成或执行 CAD 脚本；提示用户：需要先手动安装 SolidWorks，并至少启动一次完成 COM 注册。
 
 ### 连接 SolidWorks
 
@@ -41,6 +56,8 @@ session.export(model, r"C:\temp\cylinder.step")
 
 | 需求 | 脚本 | 参考文档 |
 |---|---|---|
+| 入口自检与依赖补齐 | `scripts/sw_preflight.py` | `references/troubleshooting.md` |
+| 多模型宏生成防护 | `scripts/sw_macro_guard.py` | `references/openclaw.md` |
 | 友好会话 API | `scripts/sw_session.py` | - |
 | 连接与文档管理 | `scripts/sw_connect.py` | - |
 | 外观与材质 | `scripts/sw_appearance.py` | `references/appearance.md` |
@@ -72,11 +89,32 @@ from sw_connect import connect_solidworks, mm, deg, new_document
 
 ## 使用流程
 
-1. 确认 SolidWorks 正在运行
-2. 优先用 `SolidWorksSession()` 管理连接、打开、新建、保存、导出
-3. 需要底层控制时再组合 `sw_connect.py`、`sw_part.py` 等函数
-4. 使用 `session.export()` 或 `sw_export.py` 保存/导出文件
-5. 使用 `sw_review.py` 导出预览图并自审查；如果有 GUI/桌面截图能力，打开 SolidWorks 视图截图复核
+1. 先运行 `sw_preflight.py`：缺依赖则请求用户授权自动安装；缺 SolidWorks 则停止并提示手动安装。
+2. 优先用 `SolidWorksSession()` 管理连接、打开、新建、保存、导出。
+3. 需要底层控制时再组合 `sw_connect.py`、`sw_part.py` 等函数。
+4. 如果必须由大模型生成 VBA 宏，先使用 `sw_macro_guard.py` 做模型分流、代码校验、重试和本地模板兜底。
+5. 使用 `session.export()` 或 `sw_export.py` 保存/导出文件。
+6. 使用 `sw_review.py` 导出预览图并自审查；如果有 GUI/桌面截图能力，打开 SolidWorks 视图截图复核。
+
+## GPT / Kimi / Claude 多模型策略
+
+当代理需要让大模型生成 VBA 宏时，必须通过 `scripts/sw_macro_guard.py`：
+
+1. **模型分流**：GPT 系列使用原有简洁提示词；Kimi / Claude / 未知模型自动加载强格式约束 Prompt，强制只输出 VBA 源码。
+2. **本地模板兜底**：模型输出失败或解析失败时，不直接报错；按用户关键词（如“立方体”“圆柱”“拉伸”“草图”）选择内置 VBA 模板继续执行。
+3. **输出校验**：执行前检查 `SldWorks`、`ModelDoc2`、`Sub`、`End Sub`，通过后才允许交给 SolidWorks；不通过则重试。
+4. **超时/重试**：单次模型请求建议 `30s` 超时；解析失败自动重试 `1~2` 次，重试 Prompt 追加更强格式指令。
+
+示例：
+
+```python
+from sw_macro_guard import build_prompt, fallback_macro_for_request, validate_vba_macro
+
+prompt = build_prompt("画一个 50mm 圆柱", model_name="claude")
+macro = fallback_macro_for_request("画一个 50mm 圆柱")
+result = validate_vba_macro(macro)
+assert result.ok, result.issues
+```
 
 ## 未封装 API 规则
 

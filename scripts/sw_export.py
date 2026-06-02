@@ -2,11 +2,16 @@
 SolidWorks 文件导出工具
 支持 STEP、STL、IGES、PDF、DXF/DWG、Parasolid 等格式
 """
-import win32com.client
-import pythoncom
-from win32com.client import VARIANT
 import os
-from sw_connect import create_empty_dispatch_variant, get_com_member
+
+try:
+    from .sw_preflight import import_com_dependencies
+    from .sw_connect import create_empty_dispatch_variant, get_com_member
+except ImportError:
+    from sw_preflight import import_com_dependencies
+    from sw_connect import create_empty_dispatch_variant, get_com_member
+
+pythoncom, _win32com, VARIANT = import_com_dependencies()
 
 
 def _ensure_parent_dir(file_path):

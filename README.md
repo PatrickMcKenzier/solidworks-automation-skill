@@ -31,7 +31,9 @@
 - **操作系统**: Windows 10/11
 - **SolidWorks**: 2020-2025 任意版本
 - **Python**: 3.8 或更高版本
-- **依赖库**: `pywin32`
+- **依赖库**: `pywin32`、`comtypes`
+
+> 运行前可执行 `python scripts/sw_preflight.py`。如果缺少 `comtypes` / `win32com`，脚本会先询问是否授权 AI 自动配置本地环境；如果未检测到 SolidWorks，会直接停止并提示先手动安装 SolidWorks。
 
 ### 🚀 快速开始
 
@@ -75,7 +77,7 @@ claude skill add https://github.com/wzyn20051216/solidworks-automation-skill
 ##### 1. 安装依赖
 
 ```bash
-pip install pywin32
+pip install "pywin32>=305" "comtypes>=1.2.0"
 ```
 
 ##### 2. 克隆仓库
@@ -93,8 +95,11 @@ cd solidworks-automation-skill
 import sys
 sys.path.insert(0, r"./scripts")
 
+from sw_preflight import run_preflight
 from sw_connect import connect_solidworks, mm, deg, new_document
 from sw_part import start_sketch, sketch_rectangle, end_sketch, extrude_boss
+
+run_preflight()
 
 # 连接 SolidWorks
 sw, model = connect_solidworks()
@@ -119,6 +124,8 @@ print("零件创建完成!")
 solidworks-automation-skill/
 ├── scripts/              # Python 脚本模块
 │   ├── sw_session.py    # 友好会话 API
+│   ├── sw_preflight.py  # 运行前自检、依赖补齐、SolidWorks 检测
+│   ├── sw_macro_guard.py # 多模型 Prompt、VBA 校验、重试与模板兜底
 │   ├── sw_connect.py    # 连接与文档管理
 │   ├── sw_appearance.py # 外观与材质
 │   ├── sw_part.py       # 零件建模
@@ -149,10 +156,12 @@ solidworks-automation-skill/
 import sys
 sys.path.insert(0, r"./scripts")
 
+from sw_preflight import run_preflight
 from sw_connect import mm
 from sw_part import sketch, sketch_circle, extrude_boss
 from sw_session import SolidWorksSession
 
+run_preflight()
 session = SolidWorksSession()
 model = session.new_part()
 
@@ -163,6 +172,26 @@ extrude_boss(model, sketch_name, mm(50))
 session.save(model, r"C:\temp\cylinder.sldprt")
 session.export(model, r"C:\temp\cylinder.step")
 ```
+
+#### 多模型 VBA 宏防护
+
+当需要由 GPT / Kimi / Claude 生成 SolidWorks VBA 宏时，先使用 `sw_macro_guard.py` 统一处理格式差异：
+
+```python
+from sw_macro_guard import build_prompt, fallback_macro_for_request, validate_vba_macro
+
+prompt = build_prompt("画一个 50mm 圆柱", model_name="claude")
+macro = fallback_macro_for_request("画一个 50mm 圆柱")
+result = validate_vba_macro(macro)
+assert result.ok, result.issues
+```
+
+策略：
+
+- GPT 系列沿用简洁提示词。
+- Kimi / Claude / 未知模型自动使用强格式约束 Prompt，只允许输出 VBA 源码。
+- 校验 `SldWorks`、`ModelDoc2`、`Sub`、`End Sub` 后再执行。
+- 模型输出解析失败时自动重试 `1~2` 次；仍失败则按“立方体 / 圆柱 / 拉伸 / 草图”等关键词调用本地模板兜底。
 
 #### 创建零件
 
@@ -284,14 +313,14 @@ model.Extension.SelectByID2(
 1. 目录是否放在 `~/.openclaw/skills/solidworks-automation/` 或 `~/.agents/skills/solidworks-automation/`
 2. 目录根下是否存在 `SKILL.md`
 3. 当前会话是否在安装后重新开始
-4. Python / `pywin32` 是否已就绪
+4. Python / `pywin32` / `comtypes` 是否已就绪；可先运行 `python scripts/sw_preflight.py`
 
 #### 无法连接 SolidWorks?
 
 确保:
 1. SolidWorks 已经运行
 2. Python 位数与 SolidWorks 一致(通常为 64 位)
-3. 已安装 `pywin32`: `pip install pywin32`
+3. 已安装依赖: `pip install "pywin32>=305" "comtypes>=1.2.0"`
 
 #### 特征创建失败?
 
@@ -344,7 +373,7 @@ model.Extension.SelectByID2(
 - **OS**: Windows 10/11
 - **SolidWorks**: 2020-2025 (any version)
 - **Python**: 3.8+
-- **Dependencies**: `pywin32`
+- **Dependencies**: `pywin32`, `comtypes`
 
 ### 🚀 Quick Start
 
@@ -361,7 +390,8 @@ This installs the skill into detected Claude/Codex/OpenClaw skill directories.
 ```bash
 git clone https://github.com/wzyn20051216/solidworks-automation-skill.git
 cd solidworks-automation-skill
-pip install pywin32
+pip install "pywin32>=305" "comtypes>=1.2.0"
+python scripts/sw_preflight.py
 ```
 
 #### Run Example

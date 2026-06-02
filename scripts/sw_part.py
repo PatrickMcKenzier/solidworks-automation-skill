@@ -2,10 +2,14 @@
 SolidWorks 零件建模工具
 提供草图绘制和特征创建的常用函数
 """
-import win32com.client
-import pythoncom
-from win32com.client import VARIANT
 from contextlib import contextmanager
+
+try:
+    from .sw_preflight import import_com_dependencies
+except ImportError:
+    from sw_preflight import import_com_dependencies
+
+pythoncom, _win32com, VARIANT = import_com_dependencies()
 
 PLANE_NAME_ALIASES = {
     "Front Plane": ["Front Plane", "前视基准面"],

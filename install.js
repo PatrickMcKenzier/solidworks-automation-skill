@@ -83,9 +83,9 @@ function install() {
   if (successCount > 0) {
     console.log('\n📦 安装 Python 依赖...');
     try {
-      execSync('pip install pywin32>=305', { stdio: 'inherit' });
+      execSync('pip install "pywin32>=305" "comtypes>=1.2.0"', { stdio: 'inherit' });
     } catch (error) {
-      console.log('⚠️  请手动安装依赖: pip install pywin32');
+      console.log('⚠️  请手动安装依赖: pip install "pywin32>=305" "comtypes>=1.2.0"');
     }
 
     console.log(`\n✅ 成功安装到 ${successCount}/${skillsDirs.length} 个目录！`);
