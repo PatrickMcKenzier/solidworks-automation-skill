@@ -62,7 +62,7 @@ session.export(model, r"C:\temp\cylinder.step")
 | 连接与文档管理 | `scripts/sw_connect.py` | - |
 | 外观与材质 | `scripts/sw_appearance.py` | `references/appearance.md` |
 | 零件建模（草图+特征） | `scripts/sw_part.py` | `references/part-modeling.md` |
-| 装配体操作 | `scripts/sw_assembly.py` | `references/assembly.md` |
+| 装配体操作、齿轮/铰链/可拖动运动配合 | `scripts/sw_assembly.py` | `references/assembly.md` |
 | 工程图出图 | `scripts/sw_drawing.py` | `references/drawing.md` |
 | 文件导出 | `scripts/sw_export.py` | `references/export.md` |
 | 结果自审查 | `scripts/sw_review.py` | `references/review.md` |
@@ -95,6 +95,17 @@ from sw_connect import connect_solidworks, mm, deg, new_document
 4. 如果必须由大模型生成 VBA 宏，先使用 `sw_macro_guard.py` 做模型分流、代码校验、重试和本地模板兜底。
 5. 使用 `session.export()` 或 `sw_export.py` 保存/导出文件。
 6. 使用 `sw_review.py` 导出预览图并自审查；如果有 GUI/桌面截图能力，打开 SolidWorks 视图截图复核。
+
+### 运动装配体要求
+
+当用户要求“能动起来”“在 SolidWorks 里拖动”“铰链”“齿轮联动”“真实机械配合”时：
+
+1. 先读取 `references/assembly.md` 的运动型装配工作流。
+2. 优先复用 `sw_assembly.py` 中的 `resolve_component()`、`get_assembly_entity()`、`find_largest_cylinder_face()`、`add_mate5_checked()`、`add_concentric_mate_by_cylinders()`、`add_gear_mate_by_cylinders()`。
+3. 旋转件用同心 Mate 且 `lock_rotation=False`，不要用三基准面把轴、齿轮、上盖完全锁死。
+4. 齿轮传动用真实 Gear Mate，不用脚本假动画冒充机械配合。
+5. 创建后用 `collect_mate_feature_summary()` 或特征树遍历验证 MateGroup 下存在 `MateConcentric`、`MateGearDim` 等真实 Mate 特征。
+6. 需要演示动画时可以额外脚本驱动组件位姿或 Mate Controller，但必须说明动画演示不等同于交互自由度；最终以 SolidWorks 中可拖动为准。
 
 ## GPT / Kimi / Claude 多模型策略
 
@@ -162,3 +173,4 @@ print(report["evaluation"])
 - **VARIANT**：by-ref 参数必须用 `VARIANT(pythoncom.VT_BYREF | pythoncom.VT_I4, 0)` 包装
 - **基准面名称**：`start_sketch()` 会自动兼容英文版 "Front/Top/Right Plane" 与中文版 "前视/上视/右视基准面"
 - **草图坐标**：基于草图平面的局部坐标系，单位为米
+- **运动装配**：先解析组件再选 Mate 实体；`GetCorresponding()` 用于把零件内面/特征映射到装配体上下文；同心 Mate 默认不锁旋转

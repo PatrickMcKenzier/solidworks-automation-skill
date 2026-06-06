@@ -46,7 +46,24 @@ def get_com_member(obj, attr_name, *args):
         成员值或调用结果
     """
     member = getattr(obj, attr_name)
-    return member(*args) if callable(member) else member
+    if args:
+        return member(*args)
+    try:
+        return member() if callable(member) else member
+    except Exception as exc:
+        message = str(exc)
+        if "-2147352573" in message or "找不到成员" in message or "Member not found" in message:
+            return member
+        raise
+
+
+def safe_get_com_member(obj, attr_name, *args):
+    """
+    读取 COM 成员，兼容 pywin32 中伪可调用属性。
+
+    保留该别名便于其它模块表达“安全读取”的意图；核心逻辑统一在 get_com_member。
+    """
+    return get_com_member(obj, attr_name, *args)
 
 
 def create_empty_dispatch_variant():

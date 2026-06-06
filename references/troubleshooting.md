@@ -30,6 +30,27 @@ sw = win32com.client.Dispatch("SldWorks.Application.32")  # SW 2024
 
 ## 类型错误
 
+### COM 伪可调用属性导致“找不到成员”
+
+场景：遍历特征树或读取模型摘要时，`FirstFeature`、`GetNextFeature`、`GetTitle` 等成员在 pywin32 中显示 `callable=True`，但调用后报：
+
+```text
+(-2147352573, '找不到成员。', None, None)
+```
+
+原因：SolidWorks 某些 COM 成员在动态派发下既可能表现为属性，也可能表现为方法；`callable(member)` 不能作为唯一判断。
+
+稳定写法：优先使用 `sw_connect.get_com_member()` 或 `sw_assembly.safe_get_com_member()`。
+
+```python
+from sw_connect import get_com_member
+
+feature = get_com_member(model, "FirstFeature")
+while feature:
+    print(get_com_member(feature, "Name"), get_com_member(feature, "GetTypeName2"))
+    feature = get_com_member(feature, "GetNextFeature")
+```
+
 ### SelectByID2 类型不匹配
 
 ```
@@ -53,6 +74,95 @@ warnings = VARIANT(pythoncom.VT_BYREF | pythoncom.VT_I4, 0)
 ```
 
 ## 操作失败
+
+### GetModelDoc2 返回 None
+
+场景：装配体中组件明明存在，但 `component.GetModelDoc2()` 返回 `None`，后续无法读取基准面、实体面或特征。
+
+常见原因：
+
+1. 组件处于压缩或轻化状态。
+2. 组件引用文件没有加载到内存。
+3. 刚添加组件后装配体尚未解析。
+
+稳定写法：先解析组件，再读取模型；优先用 `sw_assembly.get_component_model()`。
+
+```python
+from sw_assembly import get_component_model, resolve_component
+
+resolve_component(component)  # 默认 swComponentFullyResolved=2，失败时回退 swComponentResolved=3
+part = get_component_model(component)
+```
+
+### Mate 创建后特征树没有真实配合
+
+场景：脚本报告“成功”，但 SolidWorks 里没有 Gear Mate / Concentric Mate，拖动也不会联动。
+
+排查：
+
+1. `AddMate5()` 是否返回 `None`。
+2. by-ref `ErrorStatus` 是否为 0。
+3. 创建前选择集是否正好有 2 个对象。
+4. 选择对象是否为装配体上下文实体，而不是零件文档内实体。
+5. Mate 是否写入 `MateGroup` 子特征。
+
+稳定写法：
+
+```python
+from sw_assembly import add_mate5_checked, collect_mate_feature_summary
+
+mate = add_mate5_checked(asm, 1, lock_rotation=False, name="shaft_concentric")
+print(collect_mate_feature_summary(asm))
+```
+
+### 选择集被清空
+
+场景：第一个面选择成功，执行解析组件或切换文档后，第二个面选择成功但 `AddMate5()` 失败。
+
+原因：`SetSuppression2()`、激活文档、部分重建操作会清空或改变选择集。
+
+稳定顺序：
+
+1. 先解析所有参与 Mate 的组件。
+2. 再用 `GetCorresponding()` 映射到装配体上下文。
+3. 再清空选择集并连续选择两个实体。
+4. 立即调用 `AddMate5()`。
+
+```python
+from sw_assembly import select_entities_for_mate
+
+select_entities_for_mate(asm, entity_a, entity_b, mark=1)
+```
+
+### GetCorresponding 返回 None
+
+场景：零件内基准面或面存在，但 `component.GetCorresponding(face_or_feature)` 返回 `None`。
+
+常见原因：
+
+1. 传入对象不是该组件引用文档里的对象。
+2. 组件未解析。
+3. 使用了错误组件实例；同一零件插入多次时必须用目标实例调用 `GetCorresponding()`。
+4. 选择的是临时几何或已失效对象。
+
+稳定写法：从 `get_component_model(component)` 返回的模型中查找特征/面，再由同一个 `component` 映射。
+
+### 同心 Mate 后零件不能转
+
+原因通常不是“没有铰链”，而是旋转自由度被锁死：
+
+1. `lock_rotation=True` 或 GUI 中勾选了 Lock Rotation。
+2. 旋转件又被三个基准面重合约束完全固定。
+3. 组件本身被固定。
+4. 轴向定位 Mate 太多，导致过定义。
+
+做运动装配时，同心 Mate 默认应使用：
+
+```python
+add_concentric_mate_by_cylinders(..., lock_rotation=False)
+```
+
+上盖铰链可用同心 Mate 保留旋转，再用一个平面重合/距离 Mate 限制轴向窜动。
 
 ### 特征创建失败（返回 None）
 
@@ -84,6 +194,35 @@ success = model.Extension.SaveAs(path, 0, 1, None, errors, warnings)
 print(f"错误码: {errors.value}, 警告码: {warnings.value}")
 # 查看 references/export.md 中的错误码对照表
 ```
+
+### MathUtility.CreateTransform 不稳定
+
+场景：尝试 `sw.GetMathUtility().CreateTransform(data)` 或 `math_utility.CreateTransform()` 时 COM 返回异常、空对象，或组件移动后不求解。
+
+稳定写法：读取组件已有 `Transform2`，修改 `ArrayData`，再调用 `SetTransformAndSolve2()`；失败时再回退到 `component.Transform2 = transform`。
+
+```python
+from sw_assembly import apply_component_transform_x
+from sw_connect import deg
+
+ok = apply_component_transform_x(component, 0.1, 0.0, 0.0, deg(30))
+```
+
+注意：直接改 Transform 适合生成演示帧或定位；如果目标是在 SolidWorks 里可拖动，仍要靠真实 Mate 保留自由度。
+
+### SolidWorks 内部错误或 COM 变慢
+
+场景：大批量生成零件/装配后，`AddComponent4`、保存、导出或特征操作随机失败。
+
+常见原因：打开文档过多、图形窗口和特征树刷新堆积、同一进程长时间运行。
+
+处理顺序：
+
+1. 保存关键输出。
+2. 调用 `sw.CloseAllDocuments(False)` 清理会话。
+3. 分批重新打开必要零件并装配。
+4. 仍不稳定时，让用户确认后重启 `SLDWORKS.exe`。
+5. 脚本内记录失败组件和失败 API，不要只打印“完成”。
 
 ## 未封装 API 调用
 
