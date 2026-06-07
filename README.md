@@ -19,6 +19,7 @@
 - 📐 **工程图出图** - 三视图、剖视图、尺寸标注、BOM 表
 - 💾 **文件导出** - STEP、STL、IGES、PDF、DXF/DWG、Parasolid
 - 🎨 **外观材质** - 文档、特征、组件级颜色设置，支持装配体分色建模
+- 🎬 **Motion Study** - 自动创建运动算例、匀速旋转马达并计算/播放动画
 - 🔨 **钣金设计** - 基体法兰、边线法兰、展开图导出
 - ⚡ **焊件设计** - 结构构件、切割清单
 - 📊 **FEA 仿真** - 静态分析、频率分析、热分析
@@ -130,6 +131,7 @@ solidworks-automation-skill/
 │   ├── sw_appearance.py # 外观与材质
 │   ├── sw_part.py       # 零件建模
 │   ├── sw_assembly.py   # 装配体操作
+│   ├── sw_motion.py     # Motion Study 与旋转马达
 │   ├── sw_drawing.py    # 工程图
 │   ├── sw_export.py     # 文件导出
 │   └── sw_review.py     # 多视角预览与自审查报告
@@ -140,6 +142,7 @@ solidworks-automation-skill/
 │   ├── api-lookup.md
 │   ├── part-modeling.md
 │   ├── assembly.md
+│   ├── motion-study.md
 │   ├── drawing.md
 │   ├── export.md
 │   ├── advanced.md
@@ -226,6 +229,30 @@ comp2 = add_component(asm, r"C:\parts\part2.sldprt", 0.1, 0, 0)
 
 # 添加配合
 add_mate_coincident(asm, "Face1@part1", "FACE", "Face1@part2", "FACE")
+```
+
+#### Motion Study 旋转马达
+
+```python
+from sw_connect import mm
+from sw_motion import (
+    create_motion_study,
+    add_constant_speed_rotary_motor_by_cylinders,
+    calculate_and_play,
+)
+
+# 前提：叶轮已通过同心 Mate 装到轴上，且 lock_rotation=False。
+study = create_motion_study(asm, name="叶轮_60RPM_循环转动", duration=4.0)
+add_constant_speed_rotary_motor_by_cylinders(
+    study,
+    shaft_component=stand_comp,
+    rotor_component=impeller_comp,
+    shaft_radius=(mm(4.5), mm(5.5)),
+    rotor_radius=(mm(10.5), mm(11.5)),
+    rpm=60.0,
+    name="叶轮旋转马达_60RPM",
+)
+calculate_and_play(study)
 ```
 
 #### 导出文件

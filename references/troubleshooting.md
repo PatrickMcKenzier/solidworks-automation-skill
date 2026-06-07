@@ -51,6 +51,38 @@ while feature:
     feature = get_com_member(feature, "GetNextFeature")
 ```
 
+### Motion Study 成员“找不到成员”
+
+场景：`model.Extension.GetMotionStudyManager()` 或 `motion_mgr.CreateMotionStudy()` 报：
+
+```text
+(-2147352573, '找不到成员。', None, None)
+```
+
+常见原因：
+
+1. Motion Study 的强类型接口位于 `swmotionstudy.tlb`，不是主 `sldworks` 类型库。
+2. pywin32 动态派发下，`GetMotionStudyManager`、`CreateMotionStudy`、`Activate`、`Calculate`、`Play` 可能表现为属性，不是方法。
+
+稳定写法：优先使用 `sw_motion.py`。
+
+```python
+from sw_motion import create_motion_study, motion_member
+
+study = create_motion_study(asm, name="Motion_60RPM", duration=4.0)
+calculated = motion_member(study, "Calculate")
+```
+
+如果必须底层调用，先加载类型库：
+
+```python
+from sw_motion import ensure_motion_type_library
+
+ensure_motion_type_library(raise_on_error=True)
+motion_mgr = asm.Extension.GetMotionStudyManager
+study = motion_mgr.CreateMotionStudy
+```
+
 ### SelectByID2 类型不匹配
 
 ```
@@ -101,7 +133,7 @@ part = get_component_model(component)
 排查：
 
 1. `AddMate5()` 是否返回 `None`。
-2. by-ref `ErrorStatus` 是否为 0。
+2. by-ref `ErrorStatus` 是否为成功码；`swAddMateError_NoError=1`，部分版本也会在成功时返回 0。
 3. 创建前选择集是否正好有 2 个对象。
 4. 选择对象是否为装配体上下文实体，而不是零件文档内实体。
 5. Mate 是否写入 `MateGroup` 子特征。
@@ -114,6 +146,25 @@ from sw_assembly import add_mate5_checked, collect_mate_feature_summary
 mate = add_mate5_checked(asm, 1, lock_rotation=False, name="shaft_concentric")
 print(collect_mate_feature_summary(asm))
 ```
+
+### AddMate5 返回 Mate 但 error_status=1
+
+场景：`AddMate5()` 返回了非空 Mate，SolidWorks 特征树里也有配合，但脚本仍报失败：
+
+```text
+AddMate5 失败: type=1, error_status=1
+```
+
+原因：`swAddMateError_e` 中 `1=swAddMateError_NoError`，不是错误。不要只把 `0` 当成功。
+
+验证命令：
+
+```powershell
+Add-Type -Path 'E:\Solidworks\SOLIDWORKS\SolidWorks.Interop.swconst.dll'
+[int][SolidWorks.Interop.swconst.swAddMateError_e]::swAddMateError_NoError
+```
+
+稳定写法：使用新版 `sw_assembly.add_mate5_checked()`，它接受 `0` 和 `1` 作为成功码，并仍会检查 Mate 是否为空。
 
 ### 选择集被清空
 

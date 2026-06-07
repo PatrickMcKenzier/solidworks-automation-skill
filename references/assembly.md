@@ -137,10 +137,13 @@ print(collect_mate_feature_summary(asm))
 from sw_assembly import (
     get_component_feature,
     get_assembly_entity,
+    find_component_by_name,
     resolve_component,
     select_entities_for_mate,
 )
 
+component_a = find_component_by_name(asm, "shaft")
+component_b = find_component_by_name(asm, "bearing")
 resolve_component(component_a)
 resolve_component(component_b)
 

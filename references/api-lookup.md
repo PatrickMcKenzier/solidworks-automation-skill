@@ -24,6 +24,7 @@
 - `FeatureManager.FeatureExtrusion*`、`FeatureCut*`、扫描、放样、圆角、倒角等长参数方法
 - `IAssemblyDoc.AddComponent*`、`AddMate*`、组件变换、轻化/压缩状态
 - 运动装配体必查：`IAssemblyDoc.AddMate5`、`IComponent2.GetModelDoc2`、`IComponent2.GetCorresponding`、`IComponent2.SetSuppression2`、`ISurface.IsCylinder`、`ISurface.CylinderParams`、`IComponent2.SetTransformAndSolve2`
+- Motion Study 必查：`IModelDocExtension.GetMotionStudyManager`、`IMotionStudyManager.CreateMotionStudy`、`IMotionStudy.CreateDefinition`、`IMotionStudy.CreateFeature`、`ISimulationMotorFeatureData.ConstantSpeedMotor`、`ISimulationMotorFeatureData.LoadReferences`
 - 外观/材质：`MaterialPropertyValues`、`IMaterialVisualPropertiesData`、组件级外观、显示状态
 - 工程图：视图创建、BOM、尺寸标注、打印/导出 PDF
 - 需要 `VARIANT`、by-ref、枚举或 bitmask 的接口
@@ -52,6 +53,10 @@ API:
 - `GetCorresponding`：把零件文档中的对象映射到装配体上下文；同一零件有多个实例时，必须由目标组件实例调用。
 - `IsCylinder` / `CylinderParams`：识别轴、孔和齿轮圆柱面；`CylinderParams[6]` 是半径，单位米。
 - `SetTransformAndSolve2`：适合驱动组件位置并让装配求解器更新；稳定性差时优先复用组件现有 `Transform2` 并修改 `ArrayData`。
+- `swmotionstudy.tlb`：Motion Study 强类型接口在独立类型库中；pywin32 下需要 `pythoncom.LoadTypeLib(...)` + `win32com.client.gencache.EnsureModule(...)`。
+- `swFmAEMRotationalMotor`：本机 SW 2024 `swFeatureNameID_e` 验证值为 `78`，用于 `CreateDefinition(78)` 创建旋转马达 FeatureData。
+- `ISimulationMotorFeatureData.ConstantSpeedMotor(60.0)`：参数单位为 RPM，不是 rad/s。
+- `swAddMateError_e`：`swAddMateError_NoError=1`；不要把 `AddMate5` 的 by-ref `ErrorStatus=1` 当失败。
 
 本机枚举交叉验证命令：
 
@@ -59,6 +64,8 @@ API:
 Add-Type -Path 'E:\Solidworks\SOLIDWORKS\SolidWorks.Interop.swconst.dll'
 [int][SolidWorks.Interop.swconst.swMateType_e]::swMateGEAR
 [int][SolidWorks.Interop.swconst.swMateType_e]::swMateHINGE
+[int][SolidWorks.Interop.swconst.swFeatureNameID_e]::swFmAEMRotationalMotor
+[int][SolidWorks.Interop.swconst.swAddMateError_e]::swAddMateError_NoError
 [enum]::GetValues([SolidWorks.Interop.swconst.swComponentSuppressionState_e])
 ```
 

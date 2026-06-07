@@ -21,6 +21,8 @@ SW_MATE_CONCENTRIC = 1
 SW_MATE_PARALLEL = 3
 SW_MATE_DISTANCE = 5
 SW_MATE_GEAR = 10
+SW_ADD_MATE_ERROR_UNKNOWN = 0
+SW_ADD_MATE_ERROR_NO_ERROR = 1
 SW_COMPONENT_SUPPRESSED = 0
 SW_COMPONENT_LIGHTWEIGHT = 1
 SW_COMPONENT_FULLY_RESOLVED = 2
@@ -279,7 +281,11 @@ def add_mate5_checked(
         int(width_mate_option),
         error_status,
     )
-    if mate is None or int(error_status.value) != 0:
+    # swAddMateError_e 中 1=swAddMateError_NoError；0=Unknown 在部分版本也会伴随非空 Mate。
+    if mate is None or int(error_status.value) not in (
+        SW_ADD_MATE_ERROR_UNKNOWN,
+        SW_ADD_MATE_ERROR_NO_ERROR,
+    ):
         raise RuntimeError(
             f"AddMate5 失败: type={mate_type}, error_status={error_status.value}"
         )
@@ -547,6 +553,27 @@ def get_components(asm_model, top_level_only=True):
                 "visible": comp.Visible,
             })
     return result
+
+
+def find_component_by_name(asm_model, keyword, top_level_only=True, case_sensitive=False):
+    """
+    @brief 按组件名关键字查找 IComponent2 对象。
+    @param asm_model 装配体 IModelDoc2/IAssemblyDoc。
+    @param keyword 组件名关键字，例如 "impeller" 或 "叶轮"。
+    @param top_level_only True=仅顶层组件。
+    @param case_sensitive 是否区分大小写。
+    @return 第一个匹配的 IComponent2 对象。
+    """
+    if not keyword:
+        raise ValueError("keyword 不能为空")
+    components = safe_get_com_member(asm_model, "GetComponents", top_level_only) or []
+    needle = str(keyword) if case_sensitive else str(keyword).lower()
+    for component in components:
+        name = str(safe_get_com_member(component, "Name2"))
+        haystack = name if case_sensitive else name.lower()
+        if needle in haystack:
+            return component
+    raise RuntimeError(f"未找到组件: {keyword}")
 
 
 def suppress_component(asm_model, component_name):
