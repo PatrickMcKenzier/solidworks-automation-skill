@@ -73,9 +73,11 @@ function install() {
   console.log(`检测到 ${skillsDirs.length} 个 AI 工具目录:\n${skillsDirs.map(d => `  - ${d}`).join('\n')}\n`);
 
   let successCount = 0;
+  const installedDirs = [];
   for (const dir of skillsDirs) {
     if (installToDir(dir)) {
       successCount++;
+      installedDirs.push(path.join(dir, SKILL_NAME));
     }
   }
 
@@ -92,6 +94,13 @@ function install() {
     console.log('\n使用方法:');
     console.log('  在 Claude/Codex/Cursor/OpenClaw 中提到 SolidWorks、OpenClaw、龙虾、CAD、3D建模等关键词');
     console.log('  AI 会自动调用此 skill\n');
+
+    const codexInstallDir = installedDirs.find(dir => dir.includes(path.join('.codex', 'skills')));
+    if (codexInstallDir) {
+      const registerScript = path.join(codexInstallDir, 'mcp-server', 'register_codex_mcp.ps1');
+      console.log('可选：如需让 Codex 通过 MCP 工具调用 SolidWorks，请明确执行:');
+      console.log(`  powershell -ExecutionPolicy Bypass -File "${registerScript}" -InstallDependencies\n`);
+    }
   } else {
     console.error('\n❌ 所有目录安装均失败');
     process.exit(1);

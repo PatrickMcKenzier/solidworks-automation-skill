@@ -27,6 +27,31 @@ python mcp-server\server.py
 
 ## Codex / Claude Desktop 配置示例
 
+### Codex 一键注册
+
+在仓库根目录运行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\mcp-server\register_codex_mcp.ps1 -InstallDependencies
+```
+
+如果已经注册过同名 server，需要覆盖配置：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\mcp-server\register_codex_mcp.ps1 -InstallDependencies -Force
+```
+
+注册后可检查：
+
+```powershell
+codex mcp list
+codex mcp get solidworks
+```
+
+> 安装 skill 本身不会静默修改用户的 MCP 配置；只有用户明确运行上面的脚本或命令时，才会注册 Codex MCP Server。
+
+### 手动配置
+
 把路径替换为你的本地仓库路径：
 
 ```json
@@ -45,7 +70,7 @@ python mcp-server\server.py
 如果你的客户端支持命令行注册，也可以使用类似命令：
 
 ```powershell
-codex mcp add solidworks python C:\Users\23201\.codex\skills\solidworks-automation\mcp-server\server.py
+codex mcp add solidworks -- python C:\Users\23201\.codex\skills\solidworks-automation\mcp-server\server.py
 ```
 
 ## 已暴露工具

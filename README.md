@@ -162,7 +162,16 @@ pip install -r mcp-server\requirements.txt
 python mcp-server\server.py
 ```
 
-客户端配置示例：
+Codex 用户可在仓库根目录一键注册：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\mcp-server\register_codex_mcp.ps1 -InstallDependencies
+codex mcp list
+```
+
+> 安装 skill 不会静默改写其他用户的 MCP 配置；需要用户明确运行注册脚本，或在自己的 MCP 客户端中手动添加 server。
+
+客户端手动配置示例：
 
 ```json
 {

@@ -19,7 +19,7 @@ class PostInstallCommand(install):
         codex_skills_dir = os.path.expanduser("~/.codex/skills/solidworks-automation")
 
         # 需要复制的文件和目录
-        items_to_copy = ["scripts", "references", "SKILL.md"]
+        items_to_copy = ["scripts", "references", "mcp-server", "SKILL.md", "README.md", "requirements.txt"]
 
         for target_dir in [claude_skills_dir, codex_skills_dir]:
             try:
