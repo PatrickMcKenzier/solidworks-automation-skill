@@ -15,6 +15,7 @@
 ### ✨ 特性
 
 - 🔧 **零件建模** - 草图绘制、拉伸、旋转、倒角、圆角、阵列等
+- 🧵 **螺纹孔建模** - 攻丝底孔、M3/M4/M5/M6/M8 盲孔/通孔、孔口倒角、装饰螺纹与可见螺旋线兜底
 - 🔩 **装配体操作** - 添加组件、配合关系、干涉检查、爆炸视图
 - 📐 **工程图出图** - 三视图、剖视图、尺寸标注、BOM 表
 - 💾 **文件导出** - STEP、STL、IGES、PDF、DXF/DWG、Parasolid
@@ -150,6 +151,7 @@ solidworks-automation-skill/
 │   ├── export.md
 │   ├── advanced.md
 │   └── troubleshooting.md
+├── subskills/           # 专项子技能：多圆角/倒角 CNC、螺纹孔等
 ├── examples/            # 示例代码
 ├── mcp-server/          # 本地 stdio MCP Server
 └── README.md
