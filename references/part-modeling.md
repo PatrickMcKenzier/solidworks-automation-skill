@@ -114,6 +114,74 @@ feature_mgr.FeatureRevolve2(
 )
 ```
 
+### 阶梯轴建模推荐流程
+
+轴类零件优先用“半剖轮廓 + 中心线 + 旋转凸台”一次生成主体，不要逐段拉伸圆柱再合并。这样特征树更短，轴肩位置和总长也更容易由参数表控制。
+
+推荐做法：
+
+1. 用毫米参数表描述轴段：`start_mm`、`end_mm`、`diameter_mm`。
+2. 在 `Front Plane` 上画中心线作为旋转轴。
+3. 按轴段半径生成一条闭合半剖轮廓。
+4. 调用 `FeatureRevolve2(..., 2*pi, ...)` 后立即检查返回特征不是 `None`。
+5. 将公差、形位公差、粗糙度作为工程要求记录到属性或交付说明，不要直接扰动名义实体尺寸。
+
+最小模式：
+
+```python
+segments = [
+    {"start": 0, "end": 43, "diameter": 56},
+    {"start": 43, "end": 113, "diameter": 65},
+]
+
+with sketch(model, "Front Plane") as sketch_name:
+    model.SketchManager.CreateCenterLine(mm(-5), 0, 0, mm(120), 0, 0)
+    points = [(0, 0), (0, 28), (43, 28), (43, 32.5), (113, 32.5), (113, 0), (0, 0)]
+    for (x1, y1), (x2, y2) in zip(points, points[1:]):
+        model.SketchManager.CreateLine(mm(x1), mm(y1), 0, mm(x2), mm(y2), 0)
+
+model.ClearSelection2(True)
+model.Extension.SelectByID2(sketch_name, "SKETCH", 0, 0, 0, False, 0, create_empty_dispatch_variant(), 0)
+feature = model.FeatureManager.FeatureRevolve2(
+    True, True, False, False, False, False,
+    0, 0, 2 * math.pi, 0,
+    False, False, 0, 0, 0, 0, 0,
+    True, True, True,
+)
+if feature is None:
+    raise RuntimeError("阶梯轴旋转主体创建失败")
+```
+
+### 圆柱表面长圆槽
+
+图纸中的键槽、长圆槽、局部沉槽如果位于圆柱外表面，不要直接在中心基准面上切除。中心面切除容易把轴“剖开”，预览看起来像大平面开口，而不是表面凹槽。
+
+稳定做法：
+
+1. 按槽所在圆柱半径创建平行于 `Front Plane` 的偏置参考面，偏置量约等于目标圆柱半径。
+2. 在该切向参考面上用 `sketch_slot()` 画长圆槽。
+3. 用盲切深度表达槽深；先尝试一个方向，失败再翻转 `flip`。
+4. 创建成功后隐藏临时参考面，避免预览图被橙色基准面干扰。
+
+```python
+plane = model.FeatureManager.InsertRefPlane(8, mm(radius_mm), 0, 0, 0, 0)
+plane.Name = "Plane_Keyway_Tangent"
+
+model.Extension.SelectByID2(plane.Name, "PLANE", 0, 0, 0, False, 0, create_empty_dispatch_variant(), 0)
+model.SketchManager.InsertSketch(True)
+sketch_name = model.SketchManager.ActiveSketch.Name
+sketch_slot(model, mm(x1), 0, mm(x2), 0, mm(slot_width_mm / 2))
+model.SketchManager.InsertSketch(True)
+
+feature = extrude_cut(model, sketch_name, mm(depth_mm), direction=True, flip=True)
+if feature is None:
+    feature = extrude_cut(model, sketch_name, mm(depth_mm), direction=True, flip=False)
+if feature is None:
+    raise RuntimeError("圆柱表面长圆槽创建失败")
+```
+
+注意：`CreateSketchSlot` 参数中 `radius` 是槽宽相关参数，实际表现需用局部测试验证。对制造精确槽宽要求高时，导出后用测量或工程图复核。
+
 ### 圆角/倒角
 
 ```python

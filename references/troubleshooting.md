@@ -223,6 +223,49 @@ add_concentric_mate_by_cylinders(..., lock_rotation=False)
 3. **草图有开环** - 拉伸需要闭合轮廓
 4. **单位错误** - API 使用米，不是毫米
 
+### FeatureCut4 长参数不稳定
+
+场景：手写 `FeatureCut4(...)` 后特征返回 `None`，但同一草图在 GUI 或封装函数中可切除。
+
+原因：`FeatureCut4` 参数多，终止条件、翻转方向、`FlipSide`、`NormalCut`、选择集状态任一不匹配都会静默失败。不要凭记忆拼长参数。
+
+稳定写法：
+
+1. 优先使用 `sw_part.extrude_cut()`。
+2. 如果必须底层调用，先用最小圆柱/矩形测试各种方向和终止条件。
+3. 每次切除后检查返回特征对象；失败时不要继续保存交付文件。
+
+```python
+from sw_part import extrude_cut
+
+feature = extrude_cut(model, sketch_name, 0, direction=True, flip=False)
+if feature is None:
+    feature = extrude_cut(model, sketch_name, 0, direction=True, flip=True)
+if feature is None:
+    raise RuntimeError("切除失败，需检查草图、方向或终止条件")
+```
+
+### 中心基准面切槽导致轴被剖开
+
+场景：轴类零件上要做长圆槽/键槽，脚本在 `Front Plane` 上画槽并盲切，结果模型出现沿轴向的大平面切口，看起来像把圆柱剖掉一半。
+
+原因：`Front Plane` 常穿过轴线，不是圆柱外表面。直接从中心面切槽会产生剖切效果，而不是表面凹槽。
+
+稳定写法：先创建切向偏置参考面，再在该平面上画槽并按槽深盲切；见 `references/part-modeling.md` 的“圆柱表面长圆槽”。
+
+### 槽特征树成功但预览不可见
+
+场景：特征树中已有 `Cut_*_Slot`，`run_review()` 也通过，但等轴测或主视图看不到槽。
+
+排查：
+
+1. 槽是否切到了背侧；尝试翻转 `flip` 或导出另一侧视图。
+2. 槽是否从中心面切除但被当前着色遮挡；查看俯视/右视。
+3. 特征是否只切掉了不可见的内部体积；用剖视或修改切向参考面确认。
+4. 预览图是否显示了被选中的参考面，导致遮挡槽轮廓。
+
+处理：不要只依赖 `feature is not None`。导出 `isometric/front/top/right`，目视确认关键几何确实出现。
+
 ### 基准面选择失败
 
 **原因**: 中英文名称不同
@@ -245,6 +288,61 @@ success = model.Extension.SaveAs(path, 0, 1, None, errors, warnings)
 print(f"错误码: {errors.value}, 警告码: {warnings.value}")
 # 查看 references/export.md 中的错误码对照表
 ```
+
+### SaveAs 错误码 1 或覆盖失败
+
+场景：`session.save(model, path)` 或 `model.Extension.SaveAs(...)` 返回失败，错误码为 `1`，目标文件明明存在且路径正确。
+
+常见原因：同名文档已经在 SolidWorks 会话中打开，或目标文件被当前 SolidWorks 进程占用，导致覆盖失败。
+
+稳定写法：
+
+```python
+session = SolidWorksSession()
+session.sw.CloseDoc("Drawing_Stepped_Shaft.SLDPRT")
+model = session.new_part()
+```
+
+注意：只关闭本次脚本明确要覆盖的输出文档，不要盲目 `CloseAllDocuments()`，除非用户确认可以清理整个会话。
+
+### 临时 SLDPRT 删除失败
+
+场景：PowerShell `Remove-Item` 报：
+
+```text
+The process cannot access the file ... because it is being used by another process.
+```
+
+原因：调试零件仍在 SolidWorks 中打开。
+
+处理顺序：
+
+1. 用 `sw.CloseDoc("<文件名>.SLDPRT")` 关闭对应文档。
+2. 再用 `Remove-Item -LiteralPath <path> -Force` 清理临时文件。
+3. 删除前校验路径只匹配预期临时文件，例如 `debug_*.SLDPRT`。
+
+### 参考面或草图污染预览图
+
+场景：`run_review()` 导出的 BMP 出现橙色大参考面、草图或选择高亮，影响判断实体几何。
+
+稳定写法：
+
+```python
+for plane_name in created_plane_names:
+    model.ClearSelection2(True)
+    selected = model.Extension.SelectByID2(
+        plane_name, "PLANE", 0, 0, 0, False, 0,
+        create_empty_dispatch_variant(), 0,
+    )
+    if selected:
+        model.BlankRefGeom()
+
+model.BlankSketch()
+model.ClearSelection2(True)
+model.ForceRebuild3(False)
+```
+
+`BlankRefGeom()` 通常需要先选择要隐藏的参考几何；单独调用不一定隐藏脚本新建的基准面。
 
 ### MathUtility.CreateTransform 不稳定
 
