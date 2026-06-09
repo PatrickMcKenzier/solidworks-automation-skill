@@ -62,6 +62,7 @@ session.export(model, r"C:\temp\cylinder.step")
 | 连接与文档管理 | `scripts/sw_connect.py` | - |
 | 外观与材质 | `scripts/sw_appearance.py` | `references/appearance.md` |
 | 零件建模（草图+特征） | `scripts/sw_part.py` | `references/part-modeling.md` |
+| 多圆角/倒角 CNC 机加工件 | `subskills/solidworks-fillet-chamfer-cnc/scripts/create_cnc_mount_template.py` | `subskills/solidworks-fillet-chamfer-cnc/SKILL.md`、`subskills/solidworks-fillet-chamfer-cnc/references/cnc-fillet-chamfer-lessons.md` |
 | 装配体操作、齿轮/铰链/可拖动运动配合 | `scripts/sw_assembly.py` | `references/assembly.md` |
 | Motion Study 运动算例与旋转马达 | `scripts/sw_motion.py` | `references/motion-study.md` |
 | 工程图出图 | `scripts/sw_drawing.py` | `references/drawing.md` |
@@ -95,9 +96,10 @@ from sw_connect import connect_solidworks, mm, deg, new_document
 1. 先运行 `sw_preflight.py`：缺依赖则请求用户授权自动安装；缺 SolidWorks 则停止并提示手动安装。
 2. 优先用 `SolidWorksSession()` 管理连接、打开、新建、保存、导出。
 3. 需要底层控制时再组合 `sw_connect.py`、`sw_part.py` 等函数。
-4. 如果必须由大模型生成 VBA 宏，先使用 `sw_macro_guard.py` 做模型分流、代码校验、重试和本地模板兜底。
-5. 使用 `session.export()` 或 `sw_export.py` 保存/导出文件。
-6. 使用 `sw_review.py` 导出预览图并自审查；如果有 GUI/桌面截图能力，打开 SolidWorks 视图截图复核。
+4. 圆角/倒角很多的 CNC 件、安装座、连接块、支架，先读取 `subskills/solidworks-fillet-chamfer-cnc/SKILL.md`，按“基础体 -> 外轮廓圆角/倒角 -> 孔槽切除 -> 孔口倒角 -> 审查”的稳定顺序执行。
+5. 如果必须由大模型生成 VBA 宏，先使用 `sw_macro_guard.py` 做模型分流、代码校验、重试和本地模板兜底。
+6. 使用 `session.export()` 或 `sw_export.py` 保存/导出文件。
+7. 使用 `sw_review.py` 导出预览图并自审查；如果有 GUI/桌面截图能力，打开 SolidWorks 视图截图复核。
 
 ### MCP Server 使用
 
