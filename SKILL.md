@@ -101,12 +101,13 @@ session.export(model, r"C:\temp\cylinder.step")
 | 连接与文档管理 | `scripts/sw_connect.py` | - |
 | 外观与材质 | `scripts/sw_appearance.py` | `references/appearance.md` |
 | 零件建模（草图+特征） | `scripts/sw_part.py` | `references/part-modeling.md` |
+| 标准外啮合直齿轮实体 | `scripts/sw_gear.py` | `references/gears.md` |
 | 盲孔/沉孔/沉头孔/半圆端槽与孔位验收 | `scripts/sw_hole_features.py`、`scripts/sw_review.py` | `references/complex-hole-features.md`、`references/review.md` |
 | 自然语言到参数化设计计划 / VibeCAD | `subskills/solidworks-vibecad/scripts/plan_from_brief.py` | `subskills/solidworks-vibecad/SKILL.md`、`subskills/solidworks-vibecad/README.md` |
 | 多圆角/倒角 CNC 机加工件 | `subskills/solidworks-fillet-chamfer-cnc/scripts/create_cnc_mount_template.py`；高级圆角用 `verify_advanced_fillets.py` | `subskills/solidworks-fillet-chamfer-cnc/SKILL.md`、`subskills/solidworks-fillet-chamfer-cnc/references/cnc-fillet-chamfer-lessons.md` |
 | 螺丝孔/螺纹孔、攻丝底孔 | `subskills/solidworks-threaded-holes/scripts/create_threaded_hole_template.py` | `subskills/solidworks-threaded-holes/SKILL.md`、`subskills/solidworks-threaded-holes/references/threaded-hole-lessons.md` |
 | AutoCAD DWG/DXF 二维绘图、线稿转 CAD、批量改图 | `subskills/autocad-automation/scripts/acad_draw.py`、`subskills/autocad-automation/scripts/acad_review.py` | `subskills/autocad-automation/SKILL.md`、`subskills/autocad-automation/references/troubleshooting.md` |
-| 装配体操作、齿轮/铰链/可拖动运动配合 | `scripts/sw_assembly.py` | `references/assembly.md` |
+| 装配体操作、齿轮联动/铰链/可拖动运动配合 | `scripts/sw_assembly.py` | `references/assembly.md` |
 | Motion Study 运动算例、旋转马达与结果审计 | `scripts/sw_motion.py` | `references/motion-study.md`、`references/complex-mechanical-routing.md` |
 | 工程图出图 | `scripts/sw_drawing.py` | `references/drawing.md` |
 | 文件导出 | `scripts/sw_export.py` | `references/export.md` |
@@ -158,6 +159,9 @@ from sw_connect import connect_solidworks, mm, deg, new_document
 6. 当用户需求偏自然语言、参数不完整或需要“行业知识库 + 提示词模板 + 参数化设计计划”时，先读取 `subskills/solidworks-vibecad/SKILL.md`，生成 `design_plan.json` 和执行摘要。
 7. 圆角/倒角很多的 CNC 件、安装座、连接块、支架，先读取 `subskills/solidworks-fillet-chamfer-cnc/SKILL.md`，按“基础体 -> 外轮廓圆角/倒角 -> 孔槽切除 -> 孔口倒角 -> 审查”的稳定顺序执行。
 8. 螺丝孔、螺纹孔、攻牙孔、M3/M4/M5/M6/M8 盲孔或贯穿孔任务，先读取 `subskills/solidworks-threaded-holes/SKILL.md`；默认按“参数/孔位校验 -> 攻丝底孔 -> Metric Tap 真实 Thread -> CosmeticThread/证据螺旋线降级 -> 孔口倒角 -> 重建后特征证据 -> 属性和审查”的稳定路线执行。Hole Wizard、外螺纹、英制/管螺纹和现有零件改孔仍按 pilot 处理。
+
+**齿轮路由门禁：** 当用户说“画/建模/生成齿轮”时，先读取 `references/gears.md`，不得把实体齿轮需求替换成 Gear Mate。只有标准外啮合直齿轮且已知模数、齿数、压力角、齿宽和轴孔时，才使用 `scripts/sw_gear.py`；制造任务不得臆造参数，仅做视觉 demo 时可显式声明默认值。斜齿、锥齿、内齿、齿条、蜗轮蜗杆、变位或生产级修形/侧隙必须转专用路线或人工复核，不强套标准直齿轮脚本。“齿轮联动/传动/配合”才路由到 `sw_assembly.add_gear_mate_by_cylinders()`。
+
 9. 普通盲孔、通孔、圆柱沉孔、锥形沉头孔、半圆端槽或孔阵列任务，读取 `references/complex-hole-features.md` 并优先调用 `scripts/sw_hole_features.py`；创建参数证据必须再与 `collect_geometry_measurements()`、`validate_hole_positions()` 和剖视图交叉复核。
 10. SolidWorks 零件图、装配图、GB/T 工程图、尺寸链、孔表、BOM、标题栏或工程图审视任务，先读取 `subskills/solidworks-engineering-drawing/SKILL.md`；该子技能消费根技能的模型、孔槽和属性证据。AutoCAD 的 DWG/DXF、二维图纸、线稿转 CAD、批量改图或 AutoCAD 原生预览任务，读取 `subskills/autocad-automation/SKILL.md`。机械/3D 打印开孔交付必须按可制造图纸处理：所有孔、槽、接口、水口、螺丝孔和螺丝柱同时给出规格、数量和定位尺寸；图面拥挤时用孔表/槽表，不得用长引线替代关键尺寸。
 11. 当用户要求真实产品“原版外观”“1:1 复刻”“不像概念版”，先读取 `references/mesh-reference-import.md`：公开网格/蓝图参考优先，不要在低保真手搓底稿上反复精修；需要导入 OBJ/STL 时优先用 `scripts/sw_import_mesh_reference.py`。

@@ -95,12 +95,14 @@ python scripts/cad_studio.py create-ocp-surface --input .\smooth-loft.json --out
 |---|---|---|---|
 | [NIST 复杂测试件工程图](subskills/solidworks-engineering-drawing/README.md) | GB/T 第一角工程图、尺寸链、PDF 边界审查 | SolidWorks 2026 原生零件/工程图/PDF、5 个视图、10 个必需尺寸、A-A 剖视 | `pilot`，人工复核必需 |
 | [M6×1 真实螺纹孔](subskills/solidworks-threaded-holes/README.md) | 盲孔/贯穿孔、Metric Tap Thread、孔口倒角 | 重建后回读真实 Thread；SLDPRT/STEP/四视图；review `pass/100` | `verified` |
+| [标准渐开线直齿轮](references/gears.md) | 模数/齿数/压力角驱动的外啮合直齿轮实体，与 Gear Mate 分路 | SW2026 SP1.1：m2/z24/齿宽10/孔10，SLDPRT/STEP/四视图/重开/B-Rep 回读 `52×52×10 mm` | `pilot`，人工复核必需 |
 | [CNC 多圆角/倒角安装座](subskills/solidworks-fillet-chamfer-cnc/README.md) | 参数/碰撞预检、语义选边、三控制点可变半径、face/full-round/setback、G2 曲面组合、宽度-宽度倒角、沉孔、长圆槽、CNC 友好口袋 | SW2026 SP1.1：六项高级路径完成 SLDPRT/STEP/重开/FeatureData 读回；开源角支架在固定斜边完成 C0.2/C0.4 倒角并保持处理后拓扑；保持线仍明确 blocked | `stable` 子技能 |
 | [桌面迷你风扇运动装配](examples/08_mini_fan_motion_assembly.py) | 多零件建模、装配 Mate、旋转马达 Motion Study | 4 个零件、原生装配体、Mate/Motion 验证脚本 | `pilot`，人工复核必需 |
 
 ### ✨ 特性
 
 - 🔧 **零件建模** - 草图绘制、拉伸、旋转、倒角、圆角、阵列等
+- ⚙️ **标准直齿轮（试点）** - 真实渐开线采样齿廓、中心孔、齿宽、根切预警与 SolidWorks 2026 交付复核；实体建模与 Gear Mate 严格分路
 - 🧭 **多语言后端路由** - 按原子操作在 Python、C# PIA/Add-in、原生 C++、SWBasic、OCCT 和外部求解器之间选择，区分 Automation 等价语义与精确原生接口
 - 🧩 **C# Add-in 宿主（SW2026 已验证）** - `net48/x64` 强名称程序集覆盖应用事件、三命令 CommandGroup、TaskPane、完整 PMP Handler 与 JSON 诊断；Machine `/codebase /tlb` 注册和真机 Probe 见 [`references/solidworks-addin-host.md`](references/solidworks-addin-host.md)
 - 🧱 **无 CAD 开放格式后端** - OCCT/OCP 隔离进程真实写入 STEP、IGES、BREP、STL、OBJ、GLB，二维后端写入 DXF、SVG、PDF、PNG；复杂特征按能力门禁阻断

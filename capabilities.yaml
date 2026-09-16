@@ -71,7 +71,7 @@
     {
       "id": "solidworks_standard_automation",
       "label": "SolidWorks 常规模型、装配、工程图和导出",
-      "capability_ids": ["part_and_features", "holes_and_finishing", "assembly_and_mates", "drawing_dimension_insertion", "export_delivery"],
+      "capability_ids": ["part_and_features", "external_spur_gear_geometry", "holes_and_finishing", "assembly_and_mates", "drawing_dimension_insertion", "export_delivery"],
       "candidates": [
         {"backend": "solidworks-com-pywin32", "semantics": "exact_automation", "priority": 10},
         {"backend": "solidworks-com-comtypes", "semantics": "exact_automation", "priority": 20},
@@ -214,6 +214,16 @@
       "verified_versions": ["2024", "2026"],
       "dependencies": ["SolidWorks", "pywin32", "comtypes"],
       "limitations": ["复杂曲面、模具和高级拓扑引用不属于无人值守能力"],
+      "allowed_modes": ["interactive", "reviewed"]
+    },
+    {
+      "id": "external_spur_gear_geometry",
+      "label": "标准外啮合渐开线直齿轮实体",
+      "level": "pilot",
+      "backends": ["solidworks-com"],
+      "verified_versions": ["2026"],
+      "dependencies": ["SolidWorks", "pywin32"],
+      "limitations": ["SW2026 SP1.1 已真机验证 m2/z24/20°/齿宽10/孔10 的 SLDPRT、STEP、四视图、重开和 B-Rep 尺寸回读", "当前仅支持标准全齿高外啮合直齿轮；齿根为径向过渡+齿根圆弧，不是滚刀生成的精确 trochoid", "齿廓在 SolidWorks 中为弦线离散近似；高采样密度会显著增加建模、导出和 B-Rep 复核时间", "不包含斜齿、锥齿、内齿、齿条、蜗轮蜗杆、变位、侧隙、修形、公差、材料或强度校核"],
       "allowed_modes": ["interactive", "reviewed"]
     },
     {
